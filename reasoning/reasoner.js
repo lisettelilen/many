@@ -13,7 +13,7 @@ class Reasoner {
     );
   }
 
-  async decide(goal, observation) {
+  async decide(goal, observation, memory = null) {
     const goalSatisfied =
       this.goalEvaluator.isSatisfied(
         goal,
@@ -28,14 +28,25 @@ class Reasoner {
     }
 
     const aiAction = await this.aiSelector.select(
-        goal,
-        observation
-);
-
-console.log("AI ACTION:", aiAction);
+      goal,
+      observation
+    );
 
     if (aiAction) {
-      return aiAction;
+      if (
+        memory &&
+        aiAction.type === "click" &&
+        memory.hasTakenAction(
+          observation.url,
+          aiAction.targetId
+        )
+      ) {
+        console.log(
+          "AI tried to repeat a previous action. Falling back."
+        );
+      } else {
+        return aiAction;
+      }
     }
 
     const fallbackAction =
@@ -43,6 +54,21 @@ console.log("AI ACTION:", aiAction);
         goal,
         observation
       );
+
+    if (
+      fallbackAction &&
+      memory &&
+      fallbackAction.type === "click" &&
+      memory.hasTakenAction(
+        observation.url,
+        fallbackAction.targetId
+      )
+    ) {
+      return {
+        type: "stop",
+        reason: "Loop detected: action already taken on this page"
+      };
+    }
 
     if (!fallbackAction) {
       return {

@@ -1,6 +1,7 @@
 const Observation = require("./observation/observation");
 const ActionExecutor = require("./actions/action-executor");
 const Reasoner = require("./reasoning/reasoner");
+const AgentMemory = require("./memory/agent-memory");
 
 class AgentLoop {
   constructor(page, options = {}) {
@@ -11,6 +12,8 @@ class AgentLoop {
     this.reasoner = new Reasoner({
       aiClient: options.aiClient || null
     });
+
+    this.memory = new AgentMemory();
 
     this.maxSteps = options.maxSteps || 10;
   }
@@ -28,11 +31,19 @@ class AgentLoop {
 
       await observation.collect(this.page);
 
+      this.memory.recordObservation(observation);
+
       console.log("URL:", observation.url);
 
       const decision = await this.reasoner.decide(
-        goal,
-        observation
+            goal,
+            observation,
+            this.memory
+);
+
+      this.memory.recordStep(
+        observation,
+        decision
       );
 
       console.log("DECISION:");
@@ -40,22 +51,42 @@ class AgentLoop {
 
       if (decision.type === "stop") {
         console.log("\nAGENT STOPPED");
+
+        this.memory.show();
+
         return;
       }
 
-      await this.executor.execute(
+      this.memory.recordAction(
         decision,
         observation
       );
 
-      await this.page.waitForLoadState(
-        "domcontentloaded"
-      );
+      try {
+        await this.executor.execute(
+          decision,
+          observation
+        );
+
+        await this.page.waitForLoadState(
+          "domcontentloaded"
+        );
+      } catch (error) {
+        this.memory.recordFailure(
+          decision,
+          error
+        );
+
+        console.log("\nACTION FAILED:");
+        console.log(error.message);
+      }
     }
 
     console.log(
       `\nMAX STEPS REACHED: ${this.maxSteps}`
     );
+
+    this.memory.show();
   }
 }
 
