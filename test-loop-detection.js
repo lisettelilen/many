@@ -26,7 +26,7 @@ async function testLoopDetection() {
   });
 
   await agent.run(
-    "continue navigating through the page"
+  "click continue and keep navigating"
   );
 
   console.log("\nFINAL URL");

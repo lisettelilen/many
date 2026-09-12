@@ -29,24 +29,36 @@ class Reasoner {
 
     const aiAction = await this.aiSelector.select(
       goal,
-      observation
+      observation,
+      memory
     );
 
-    if (aiAction) {
-      if (
-        memory &&
-        aiAction.type === "click" &&
-        memory.hasTakenAction(
-          observation.url,
-          aiAction.targetId
-        )
-      ) {
-        console.log(
-          "AI tried to repeat a previous action. Falling back."
+    if (
+      aiAction &&
+      memory &&
+      aiAction.type === "click" &&
+      memory.hasTakenAction(
+        observation.url,
+        aiAction.targetId
+      )
+    ) {
+      console.log(
+        "AI tried to repeat a previous action. Recovering..."
+      );
+
+      const recoveryAction =
+        await this.aiSelector.recover(
+          goal,
+          observation,
+          memory,
+          aiAction
         );
-      } else {
-        return aiAction;
+
+      if (recoveryAction) {
+        return recoveryAction;
       }
+    } else if (aiAction) {
+      return aiAction;
     }
 
     const fallbackAction =

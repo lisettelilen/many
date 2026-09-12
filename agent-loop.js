@@ -49,6 +49,13 @@ class AgentLoop {
       console.log("DECISION:");
       console.log(decision);
 
+      if (!decision) {
+      console.log("\nAGENT STOPPED");
+      console.log("Reason: No valid decision returned");
+      this.memory.show();
+      return;
+}
+
       if (decision.type === "stop") {
         console.log("\nAGENT STOPPED");
 
