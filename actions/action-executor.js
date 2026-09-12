@@ -29,16 +29,6 @@ class ActionExecutor {
       `[data-many-id="${element.id}"]`
     );
 
-    
-  await this.page.locator("[data-many-id]").evaluateAll(elements =>
-    elements.map(el => ({
-      id: el.getAttribute("data-many-id"),
-      text: el.innerText,
-      href: el.href
-    }))
-  )
-);
-
     await locator.click();
   }
 }

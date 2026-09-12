@@ -70,9 +70,10 @@ Rules:
 
     const result = await this.client(prompt);
 
-    console.log("RAW AI RESULT:");
-    console.log(result);
-
+    if (process.env.DEBUG_MANY === "true") {
+  console.log("RAW AI RESULT:");
+  console.log(result);
+}
     if (!result) {
       return null;
     }
