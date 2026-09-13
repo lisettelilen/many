@@ -1,7 +1,5 @@
 require("dotenv").config();
 
-require("dotenv").config();
-
 console.log(
   "API KEY LOADED:",
   Boolean(process.env.OPENAI_API_KEY)

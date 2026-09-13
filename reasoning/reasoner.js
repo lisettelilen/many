@@ -13,7 +13,8 @@ class Reasoner {
     );
   }
 
-  async decide(goal, observation, memory = null) {
+ async decide(goal, observation, memory = null, currentStep = null) {
+    const activeGoal = currentStep || goal;
     const goalSatisfied =
       this.goalEvaluator.isSatisfied(
         goal,
@@ -28,7 +29,7 @@ class Reasoner {
     }
 
     const aiAction = await this.aiSelector.select(
-      goal,
+      activeGoal,
       observation,
       memory
     );
@@ -48,7 +49,7 @@ class Reasoner {
 
       const recoveryAction =
         await this.aiSelector.recover(
-          goal,
+          activeGoal,
           observation,
           memory,
           aiAction
@@ -63,7 +64,7 @@ class Reasoner {
 
     const fallbackAction =
       this.fallbackSelector.select(
-        goal,
+        activeGoal,
         observation
       );
 

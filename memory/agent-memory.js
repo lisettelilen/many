@@ -4,6 +4,7 @@ class AgentMemory {
     this.visitedUrls = new Set();
     this.actionsTaken = [];
     this.failedActions = [];
+    this.trajectory = [];
   }
 
   recordObservation(observation) {
@@ -62,6 +63,33 @@ class AgentMemory {
     };
   }
 
+  recordTrajectory({
+  planStep,
+  beforeObservation,
+  action,
+  afterObservation,
+  stepResult
+}) {
+  this.trajectory.push({
+    planStep,
+
+    beforeUrl: beforeObservation.url,
+    beforeTitle: beforeObservation.title,
+
+    action: {
+      type: action.type,
+      targetId: action.targetId,
+      reason: action.reason
+    },
+
+    afterUrl: afterObservation.url,
+    afterTitle: afterObservation.title,
+
+    stepComplete: stepResult.complete,
+    evaluationReason: stepResult.reason
+  });
+}
+
   show() {
     console.log("\nMEMORY");
     console.log("======");
@@ -74,6 +102,11 @@ class AgentMemory {
 
     console.log("\nFailures:");
     console.log(this.failedActions);
+
+    console.log("\nTRAJECTORY:");
+    console.log(
+    JSON.stringify(this.trajectory, null, 2)
+);
   }
 }
 
