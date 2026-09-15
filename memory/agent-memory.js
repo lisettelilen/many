@@ -67,6 +67,7 @@ class AgentMemory {
   planStep,
   beforeObservation,
   action,
+  actionResult,
   afterObservation,
   stepResult
 }) {
@@ -79,8 +80,17 @@ class AgentMemory {
     action: {
       type: action.type,
       targetId: action.targetId,
+       query: action.query || null,
       reason: action.reason
     },
+
+    result: actionResult
+    ? {
+      findings: actionResult.findings || [],
+      evidence: actionResult.evidence || [],
+      sourceUrl: actionResult.sourceUrl || null
+    }
+    : null,
 
     afterUrl: afterObservation.url,
     afterTitle: afterObservation.title,

@@ -4,6 +4,8 @@ const AIActionSelector = require("./ai-action-selector");
 
 class Reasoner {
   constructor(options = {}) {
+    this.persona = options.persona || null;
+
     this.goalEvaluator = new GoalEvaluator();
 
     this.fallbackSelector = new ActionSelector();
@@ -21,7 +23,7 @@ class Reasoner {
         observation
       );
 
-    if (goalSatisfied) {
+    if (goalSatisfied && !currentStep) {      
       return {
         type: "stop",
         reason: "Goal appears satisfied"
@@ -31,7 +33,8 @@ class Reasoner {
     const aiAction = await this.aiSelector.select(
       activeGoal,
       observation,
-      memory
+      memory,
+      this.persona
     );
 
     if (
@@ -52,7 +55,8 @@ class Reasoner {
           activeGoal,
           observation,
           memory,
-          aiAction
+          aiAction,
+          this.persona
         );
 
       if (recoveryAction) {

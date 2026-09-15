@@ -4,26 +4,33 @@ const Reasoner = require("./reasoning/reasoner");
 const AgentMemory = require("./memory/agent-memory");
 const Planner = require("./planning/planner");
 const StepEvaluator = require("./planning/step-evaluator");
+const Inspector = require("./reasoning/inspector");
 
 class AgentLoop {
   constructor(page, options = {}) {
     this.page = page;
 
+    this.persona = options.persona || null;
+
     this.executor = new ActionExecutor(page);
+
+    this.inspector = new Inspector(options.aiClient || null);
 
     this.stepEvaluator = new StepEvaluator(
   options.aiClient || null
 );
 
     this.reasoner = new Reasoner({
-      aiClient: options.aiClient || null
+      aiClient: options.aiClient || null,
+      persona: this.persona
     });
 
     this.memory = new AgentMemory();
 
     this.planner = new Planner(
-      options.aiClient || null
-    );
+  options.aiClient || null,
+  this.persona
+);
 
     this.maxSteps = options.maxSteps || 10;
   }
@@ -82,7 +89,10 @@ const decision = await this.reasoner.decide(
       console.log("\nAGENT STOPPED");
       console.log("Reason: No valid decision returned");
       this.memory.show();
-      return;
+      return {
+      status: "stopped",
+      trajectory: this.memory.trajectory
+    };
 }
 
       if (decision.type === "stop") {
@@ -90,7 +100,10 @@ const decision = await this.reasoner.decide(
 
         this.memory.show();
 
-        return;
+       return {
+      status: "stopped",
+      trajectory: this.memory.trajectory
+    };
       }
 
       this.memory.recordAction(
@@ -99,11 +112,19 @@ const decision = await this.reasoner.decide(
       );
 
       try {
-        await this.executor.execute(
-          decision,
-          observation
-        );
+        let actionResult;
 
+      if (decision.type === "inspect") {
+        actionResult = await this.inspector.inspect(
+        observation,
+        decision.query
+  );
+      } else {
+        actionResult = await this.executor.execute(
+        decision,
+        observation
+  );
+}
         await this.page.waitForLoadState(
           "domcontentloaded"
         );
@@ -118,15 +139,17 @@ const stepResult =
     currentStep,
     observation,
     decision,
-    afterObservation
+    afterObservation,
+    actionResult
   );
 
   this.memory.recordTrajectory({
   planStep: currentStep,
   beforeObservation: observation,
   action: decision,
+  actionResult,
   afterObservation,
-  stepResult
+  stepResult,
 });
 
 console.log("\nSTEP EVALUATION:");
@@ -140,7 +163,10 @@ if (stepResult.complete) {
 
     this.memory.show();
 
-    return;
+   return {
+  status: "completed",
+  trajectory: this.memory.trajectory
+};
   }
 
   console.log(
@@ -156,7 +182,10 @@ if (stepResult.complete) {
     this.planner.stepAttempts
   );
 
-  if (this.planner.shouldReplan()) {
+  const maxStepAttempts =
+  this.persona?.maxStepAttempts ?? 2;
+
+  if (this.planner.shouldReplan(maxStepAttempts)) {
   console.log("\nAGENT APPEARS STUCK");
   console.log("REPLANNING...");
 
@@ -195,11 +224,16 @@ if (stepResult.complete) {
     }
 
     console.log(
-      `\nMAX STEPS REACHED: ${this.maxSteps}`
-    );
+  `\nMAX STEPS REACHED: ${this.maxSteps}`
+);
 
-    this.memory.show();
+this.memory.show();
+
+return {
+  status: "max_steps_reached",
+  trajectory: this.memory.trajectory
+    };
+
   }
 }
-
 module.exports = AgentLoop;

@@ -7,7 +7,8 @@ class StepEvaluator {
     step,
     beforeObservation,
     action,
-    afterObservation
+    afterObservation,
+    actionResult = null
   ) {
     if (!this.client || !step) {
       return {
@@ -30,6 +31,10 @@ ${(beforeObservation.headings || []).join("\n")}
 
 ACTION TAKEN:
 ${JSON.stringify(action)}
+ACTION RESULT:
+${actionResult
+  ? JSON.stringify(actionResult, null, 2)
+  : "No action result"}
 
 AFTER ACTION:
 URL: ${afterObservation.url}
@@ -52,6 +57,8 @@ Rules:
 - A navigation step may be complete if the requested navigation occurred successfully.
 - Do not mark future plan steps as complete.
 - Do not invent evidence.
+- For an "inspect" action, use ACTION RESULT as evidence of what the agent found on the current page.
+- An information-gathering step may be complete if ACTION RESULT contains the information requested by the step.
 `;
 
     try {

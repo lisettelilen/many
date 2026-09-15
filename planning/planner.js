@@ -1,6 +1,7 @@
 class Planner {
-  constructor(client = null) {
+  constructor(client = null, persona = null) {
   this.client = client;
+  this.persona = persona;
     this.goal = null;
     this.steps = [];
     this.currentStepIndex = 0;
@@ -63,8 +64,17 @@ ${(observation.interactives || [])
 `
   : "No page observation available.";
 
+  const personaInstructions = this.persona?.instructions || `
+  Act as a balanced user.
+  Prefer a practical and goal-oriented strategy.
+`;
+
   const prompt = `
 You are a planner for an autonomous QA browser agent.
+
+PERSONA BEHAVIOR:
+${personaInstructions}
+
 
 GOAL:
 ${goal}

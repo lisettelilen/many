@@ -3,7 +3,7 @@ class AIActionSelector {
     this.client = client;
   }
 
-  async select(goal, observation, memory = null) {
+  async select(goal, observation, memory = null, persona = null) {
     if (!this.client) {
       return null;
     }
@@ -26,8 +26,15 @@ class AIActionSelector {
           steps: []
         };
 
+    const personaInstructions = persona?.instructions || `
+  Act as a balanced user.
+  Prefer useful, goal-oriented actions.
+`;
     const prompt = `
 You are the action selector for an autonomous browser agent.
+
+PERSONA BEHAVIOR:
+${personaInstructions}
 
 GOAL:
 ${goal}
@@ -47,7 +54,9 @@ ${JSON.stringify(interactives, null, 2)}
 
 Choose exactly one next action.
 
-Return ONLY valid JSON using this structure:
+Return ONLY valid JSON.
+
+For a click:
 
 {
   "type": "click",
@@ -55,12 +64,24 @@ Return ONLY valid JSON using this structure:
   "reason": "short explanation"
 }
 
+For inspection actions:
+
+{
+  "type": "inspect",
+  "query": "specific information to find on the current page",
+  "reason": "short explanation"
+}
+
 Rules:
-- targetId MUST exist in INTERACTIVE ELEMENTS.
+- For "click" actions, targetId MUST exist in INTERACTIVE ELEMENTS.
+- Use "inspect" when the needed information is already present on the current page and no navigation is required.
+- "inspect" does NOT require a targetId.
 - Do not invent elements.
 - Do NOT repeat an action already taken on the same URL.
 - If a previous action returned to the same page, choose a different useful action.
 - Pick the action most likely to move toward the goal.
+- For "inspect" actions, query MUST describe the specific information that should be extracted from the current page.
+- Prefer a focused query instead of requesting the entire page.
 - If there is no useful action, return:
 {
   "type": "stop",
@@ -84,25 +105,33 @@ Rules:
           ? JSON.parse(result)
           : result;
 
-      if (action.type === "stop") {
-        return action;
-      }
+        if (action.type === "stop") {
+       return action;
+    }
 
-      const exists = observation.interactives.some(
-        item => item.id === action.targetId
-      );
-
-      if (!exists) {
-        return null;
-      }
-
+        if (action.type === "inspect") {
       return action;
+    }
+
+        if (action.type === "click") {
+      const exists = observation.interactives.some(
+       item => item.id === action.targetId
+  );
+
+  if (!exists) {
+    return null;
+  }
+
+  return action;
+}
+
+return null;
     } catch {
       return null;
     }
   }
 
-  async recover(goal, observation, memory, rejectedAction) {
+  async recover(goal, observation, memory, rejectedAction, persona = null) {
     if (!this.client) {
       return null;
     }
@@ -118,8 +147,16 @@ Rules:
 
     const memoryContext = memory.getContext();
 
+    const personaInstructions = persona?.instructions || `
+  Act as a balanced user.
+  Prefer useful, goal-oriented actions.
+`;
+
     const prompt = `
 You are recovering from a repeated action.
+
+PERSONA BEHAVIOR:
+${personaInstructions}
 
 GOAL:
 ${goal}
@@ -139,7 +176,9 @@ ${JSON.stringify(rejectedAction, null, 2)}
 
 Choose a DIFFERENT useful action.
 
-Return ONLY valid JSON:
+Return ONLY valid JSON.
+
+For a click:
 
 {
   "type": "click",
@@ -147,11 +186,24 @@ Return ONLY valid JSON:
   "reason": "short explanation"
 }
 
+
+For inspection actions:
+
+{
+  "type": "inspect",
+  "query": "specific information to find on the current page",
+  "reason": "short explanation"
+}
+
 Rules:
 - Do NOT choose the rejected targetId.
+- You may use "inspect" if the useful next step is to read/analyze the current page instead of clicking.
+- "inspect" does NOT require a targetId.
 - Do NOT repeat an action already taken on this URL.
-- targetId MUST exist in INTERACTIVE ELEMENTS.
+- For "click" actions, targetId MUST exist in INTERACTIVE ELEMENTS.
 - If another useful action exists, choose it.
+- For "inspect" actions, query MUST describe the specific information that should be extracted from the current page.
+- Prefer a focused query instead of requesting the entire page.
 - If no alternative exists, return:
 {
   "type": "stop",
@@ -166,28 +218,39 @@ Rules:
     }
 
     try {
-      const action =
-        typeof result === "string"
-          ? JSON.parse(result)
-          : result;
+  const action =
+    typeof result === "string"
+      ? JSON.parse(result)
+      : result;
 
-      if (action.type === "stop") {
-        return action;
-      }
+  if (action.type === "stop") {
+    return action;
+  }
 
-      const exists = observation.interactives.some(
-        item => item.id === action.targetId
-      );
+  if (action.type === "inspect") {
+    return action;
+  }
 
-      if (!exists) {
-        return null;
-      }
+  if (action.type === "click") {
+    const exists = observation.interactives.some(
+      item => item.id === action.targetId
+    );
 
-      return action;
-    } catch {
+    if (!exists) {
       return null;
     }
+
+    return action;
   }
+
+  return null;
+
+} catch {
+  return null;
+}
+
+
+ }
 }
 
 module.exports = AIActionSelector;

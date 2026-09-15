@@ -34,8 +34,8 @@ class Observation {
     let nextId = 1;
 
     // LINKS
-    this.links = await page.locator("a").evaluateAll(
-      (links, startId) => {
+      this.links = await page.locator("a:visible").evaluateAll(
+        (links, startId) => {
         let id = startId;
 
         return links
@@ -66,7 +66,7 @@ class Observation {
     nextId += this.links.length;
 
     // BUTTONS
-    this.buttons = await page.locator("button").evaluateAll(
+this.buttons = await page.locator("button:visible").evaluateAll(
       (buttons, startId) => {
         let id = startId;
 
@@ -96,7 +96,7 @@ class Observation {
     nextId += this.buttons.length;
 
     // INPUTS
-    this.inputs = await page.locator("input").evaluateAll(
+this.inputs = await page.locator("input:visible").evaluateAll(
       (inputs, startId) => {
         let id = startId;
 
